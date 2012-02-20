@@ -1,36 +1,44 @@
 package gotelnet
 
 import (
+	"bufio"
 	"io"
 )
 
 type telnetProtocol struct {
-	in io.Reader
+	in *bufio.Reader
 	out io.Writer
+
+	iac bool
+}
+
+func makeTelnetProtocol(in io.Reader, out io.Writer) *telnetProtocol {
+	bin := bufio.NewReader(in)
+	return &telnetProtocol{bin, out, false}
 }
 
 func (p *telnetProtocol) Read(b []byte) (n int, err error) {
-	buf := make([]byte, len(b))
-	n, err = p.in.Read(buf)
-	buf = buf[0:n]
-	for i := 0; len(buf) > 0; {
-		switch buf[0] {
-		case InterpretAsCommand:
-			n--
-			switch buf[1] {
+	var c byte
+	for max := len(b); n < max; {
+		if p.iac {
+			p.iac = false
+			switch c, err = p.in.ReadByte(); c {
 			case InterpretAsCommand:
-				buf = buf[1:]
-			default :
-				n--
-				buf = buf[2:]
+				b[n] = c
+				n++
+			default:
 				continue
 			}
-			fallthrough
-		default:
-			b[i] = buf[0]
-			buf = buf[1:]
-			i++
+		} else{
+			switch c, err = p.in.ReadByte(); c {
+			case InterpretAsCommand:
+				p.iac = true
+			default:
+				b[n] = c
+				n++
+			}
 		}
+		if p.in.Buffered() == 0 { break }
 	}
-	return
+	return n, nil
 }

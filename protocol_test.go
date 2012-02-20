@@ -6,10 +6,11 @@ import (
 )
 
 func processBytes(t *testing.T, b []byte) (r, w []byte) {
-	r = make([]byte, len(b)) 	// At most we'll read all the bytes
 	in := bytes.NewBuffer(b)
 	out := &bytes.Buffer{}
-	protocol := &telnetProtocol{in, out}
+	protocol := makeTelnetProtocol(in, out)
+
+	r = make([]byte, len(b)) 	// At most we'll read all the bytes
 	if n, err := protocol.Read(r); err != nil {
 		t.Fatalf("Read error %q", err)
 	} else {
@@ -43,4 +44,17 @@ func TestEscapedIAC(t *testing.T) {
 	r, w := processBytes(t, []byte{'h', InterpretAsCommand, InterpretAsCommand, 'i'})
 	assertEqual(t, r, []byte("h\xffi"))
 	assertEqual(t, w, []byte{})
+}
+
+func TestSplitCommand(t *testing.T) {
+	var in, out bytes.Buffer
+	protocol := makeTelnetProtocol(&in, &out)
+
+	r := make([]byte, 2)
+	in.Write([]byte{'h', InterpretAsCommand})
+	n, _ := protocol.Read(r)
+	assertEqual(t, r[:n], []byte("h"))
+	in.Write([]byte{NoOperation, 'i'})
+	n, _ = protocol.Read(r)
+	assertEqual(t, r[:n], []byte("i"))
 }
