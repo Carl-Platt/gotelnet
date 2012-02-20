@@ -50,9 +50,7 @@ func dontOption(p *telnetProtocol, c byte) (readerState, bool) {
 func (p *telnetProtocol) Read(b []byte) (n int, err error) {
 	for n < len(b) {
 		c, er := p.in.ReadByte()
-		if er == io.EOF {
-			break
- 		} else if er != nil {
+ 		if er != nil {
 			err = er
 			break
 		} else {
@@ -62,6 +60,7 @@ func (p *telnetProtocol) Read(b []byte) (n int, err error) {
 				n++
 			}
 		}
+		if p.in.Buffered() == 0 { break }
 	}
 	return
 }
