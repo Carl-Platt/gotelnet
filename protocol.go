@@ -16,22 +16,35 @@ func makeTelnetProtocol(in io.Reader, out io.Writer) *telnetProtocol {
 	return &telnetProtocol{bin, out, readAscii}
 }
 
-type readerState func(byte, []byte, int) (int, readerState)
+type readerState func(*telnetProtocol, byte) (readerState, bool)
 
-func readAscii(c byte, b []byte, n int) (int, readerState) {
+func readAscii(_ *telnetProtocol, c byte) (readerState, bool) {
 	if c == InterpretAsCommand {
-		return n, readCommand
+		return readCommand, false
 	}
-	b[n] = c
-	return n+1, readAscii
+	return readAscii, true
 }
 
-func readCommand(c byte, b []byte, n int) (int, readerState) {
-	if c == InterpretAsCommand {
-		b[n] = c
-		return n+1, readAscii
+func readCommand(_ *telnetProtocol, c byte) (readerState, bool) {
+	switch c {
+	case InterpretAsCommand:
+		return readAscii, true
+	case Do, Dont:
+		return wontOption, false
+	case Will, Wont:
+		return dontOption, false
 	}
-	return n, readAscii
+	return readAscii, false
+}
+
+func wontOption(p *telnetProtocol, c byte) (readerState, bool) {
+	p.out.Write([]byte{InterpretAsCommand, Wont, c})
+	return readAscii, false
+}
+
+func dontOption(p *telnetProtocol, c byte) (readerState, bool) {
+	p.out.Write([]byte{InterpretAsCommand, Dont, c})
+	return readAscii, false
 }
 
 func (p *telnetProtocol) Read(b []byte) (n int, err error) {
@@ -43,7 +56,11 @@ func (p *telnetProtocol) Read(b []byte) (n int, err error) {
 			err = er
 			break
 		} else {
-			n, p.state = p.state(c, b, n)
+			var ok bool
+			if p.state, ok = p.state(p, c); ok {
+				b[n] = c
+				n++
+			}
 		}
 	}
 	return

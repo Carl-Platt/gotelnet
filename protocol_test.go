@@ -58,3 +58,17 @@ func TestSplitCommand(t *testing.T) {
 	n, _ = protocol.Read(r)
 	assertEqual(t, r[:n], []byte("i"))
 }
+
+func testOption(t *testing.T, command, response byte, message string) {
+	t.Logf("testOption %s", message)
+	r, w := processBytes(t, []byte{'h', InterpretAsCommand, command, 0, 'i'})
+	assertEqual(t, r, []byte("hi"))
+	assertEqual(t, w, []byte{InterpretAsCommand, response, 0})
+}
+
+func TestNaiveOptionNegotiation(t *testing.T) {
+	testOption(t, Do, Wont, "Do")
+	testOption(t, Dont, Wont, "Dont")
+	testOption(t, Will, Dont, "Will")
+	testOption(t, Wont, Dont, "Wont")
+}
