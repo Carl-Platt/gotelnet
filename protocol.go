@@ -8,37 +8,43 @@ import (
 type telnetProtocol struct {
 	in *bufio.Reader
 	out io.Writer
-
-	iac bool
+	state readerState
 }
 
 func makeTelnetProtocol(in io.Reader, out io.Writer) *telnetProtocol {
 	bin := bufio.NewReader(in)
-	return &telnetProtocol{bin, out, false}
+	return &telnetProtocol{bin, out, readAscii}
+}
+
+type readerState func(byte, []byte, int) (int, readerState)
+
+func readAscii(c byte, b []byte, n int) (int, readerState) {
+	if c == InterpretAsCommand {
+		return n, readCommand
+	}
+	b[n] = c
+	return n+1, readAscii
+}
+
+func readCommand(c byte, b []byte, n int) (int, readerState) {
+	if c == InterpretAsCommand {
+		b[n] = c
+		return n+1, readAscii
+	}
+	return n, readAscii
 }
 
 func (p *telnetProtocol) Read(b []byte) (n int, err error) {
-	var c byte
-	for max := len(b); n < max; {
-		if p.iac {
-			p.iac = false
-			switch c, err = p.in.ReadByte(); c {
-			case InterpretAsCommand:
-				b[n] = c
-				n++
-			default:
-				continue
-			}
-		} else{
-			switch c, err = p.in.ReadByte(); c {
-			case InterpretAsCommand:
-				p.iac = true
-			default:
-				b[n] = c
-				n++
-			}
+	for n < len(b) {
+		c, er := p.in.ReadByte()
+		if er == io.EOF {
+			break
+ 		} else if er != nil {
+			err = er
+			break
+		} else {
+			n, p.state = p.state(c, b, n)
 		}
-		if p.in.Buffered() == 0 { break }
 	}
-	return n, nil
+	return
 }
