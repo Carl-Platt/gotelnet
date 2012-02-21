@@ -1,19 +1,17 @@
 package gotelnet
 
 import (
-	"bufio"
 	"io"
 )
 
 type telnetProtocol struct {
-	in *bufio.Reader
+	in io.Reader
 	out io.Writer
 	state readerState
 }
 
 func makeTelnetProtocol(in io.Reader, out io.Writer) *telnetProtocol {
-	bin := bufio.NewReader(in)
-	return &telnetProtocol{bin, out, readAscii}
+	return &telnetProtocol{in, out, readAscii}
 }
 
 type readerState func(*telnetProtocol, byte) (readerState, bool)
@@ -48,19 +46,17 @@ func dontOption(p *telnetProtocol, c byte) (readerState, bool) {
 }
 
 func (p *telnetProtocol) Read(b []byte) (n int, err error) {
-	for n < len(b) {
-		c, er := p.in.ReadByte()
- 		if er != nil {
-			err = er
-			break
-		} else {
-			var ok bool
-			if p.state, ok = p.state(p, c); ok {
-				b[n] = c
-				n++
-			}
+	buf := make([]byte, len(b))
+	nr, err := p.in.Read(buf)
+	buf = buf[:nr]
+	for len(buf) > 0 && n < len(b) {
+		var ok bool
+		p.state, ok = p.state(p, buf[0])
+		if ok {
+			b[n] = buf[0]
+			n++
 		}
-		if p.in.Buffered() == 0 { break }
+		buf = buf[1:]
 	}
-	return
+	return n, err
 }
