@@ -10,11 +10,11 @@ func processBytes(t *testing.T, b []byte) (r, w []byte) {
 	out := &bytes.Buffer{}
 	protocol := makeTelnetProtocol(in, out)
 
-	r = make([]byte, len(b)) 	// At most we'll read all the bytes
+	r = make([]byte, len(b)) // At most we'll read all the bytes
 	if n, err := protocol.Read(r); err != nil {
 		t.Fatalf("Read error %q", err)
 	} else {
-		r = r[0:n] 				// Truncate to the length actually read
+		r = r[0:n] // Truncate to the length actually read
 		t.Logf("Read %d bytes %q", n, r)
 	}
 	w = out.Bytes()
@@ -74,9 +74,11 @@ func TestNaiveOptionNegotiation(t *testing.T) {
 }
 
 type Error string
+
 func (e Error) Error() string { return string(e) }
 
 type boomReader int
+
 func (r boomReader) Read(b []byte) (n int, err error) {
 	for i := 0; i < int(r); i++ {
 		b[i] = 'A' + byte(i)
@@ -88,9 +90,13 @@ func TestErrorReading(t *testing.T) {
 	var out bytes.Buffer
 	protocol := makeTelnetProtocol(boomReader(2), &out)
 	buf := make([]byte, 16)
-	n, err := protocol.Read(buf);
-	if err == nil { t.Fatalf("expected error") }
-	if err.Error() != "boom" { t.Fatalf("expected \"boom\", got %q", err) }
+	n, err := protocol.Read(buf)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if err.Error() != "boom" {
+		t.Fatalf("expected \"boom\", got %q", err)
+	}
 	assertEqual(t, buf[:n], []byte("AB"))
 }
 
@@ -99,7 +105,9 @@ func TestWriteAscii(t *testing.T) {
 	protocol := makeTelnetProtocol(&in, &out)
 	expected := []byte("hello")
 	n, err := protocol.Write(expected)
-	if err != nil { t.Fatalf("Error Writing: %q", err) }
+	if err != nil {
+		t.Fatalf("Error Writing: %q", err)
+	}
 	if n != len(expected) {
 		t.Fatalf("Expected to write %d but wrote %d", len(expected), n)
 	}
@@ -110,8 +118,12 @@ func TestWriteIAC(t *testing.T) {
 	var in, out bytes.Buffer
 	protocol := makeTelnetProtocol(&in, &out)
 	n, err := protocol.Write([]byte{'h', InterpretAsCommand, 'i'})
-	if err != nil { t.Fatalf("Error Writing: %q", err) }
-	if n != 3 { t.Fatalf("Expected to write 3 but wrote %d", n) }
+	if err != nil {
+		t.Fatalf("Error Writing: %q", err)
+	}
+	if n != 3 {
+		t.Fatalf("Expected to write 3 but wrote %d", n)
+	}
 	expected := []byte{'h', InterpretAsCommand, InterpretAsCommand, 'i'}
 	assertEqual(t, out.Bytes(), expected)
 }

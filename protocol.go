@@ -5,8 +5,8 @@ import (
 )
 
 type telnetProtocol struct {
-	in io.Reader
-	out io.Writer
+	in    io.Reader
+	out   io.Writer
 	state readerState
 }
 

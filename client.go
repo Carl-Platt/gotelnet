@@ -15,7 +15,9 @@ type client struct {
 
 func Dial(addr string) (conn Conn, err error) {
 	con, er := net.Dial("tcp", addr)
-	if er != nil { return nil, er	}
+	if er != nil {
+		return nil, er
+	}
 	p := makeTelnetProtocol(con, con)
 	return &client{con, p}, nil
 }
