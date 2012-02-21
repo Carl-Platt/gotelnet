@@ -60,3 +60,15 @@ func (p *telnetProtocol) Read(b []byte) (n int, err error) {
 	}
 	return n, err
 }
+
+func (p *telnetProtocol) Write(b []byte) (n int, err error) {
+	for n = 0; len(b) > 0 && err == nil; n++ {
+		if b[0] == InterpretAsCommand {
+			_, err = p.out.Write([]byte{InterpretAsCommand, InterpretAsCommand})
+		} else {
+			_, err = p.out.Write(b[0:1])
+		}
+		b = b[1:]
+	}
+	return
+}

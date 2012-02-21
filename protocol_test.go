@@ -93,3 +93,25 @@ func TestErrorReading(t *testing.T) {
 	if err.Error() != "boom" { t.Fatalf("expected \"boom\", got %q", err) }
 	assertEqual(t, buf[:n], []byte("AB"))
 }
+
+func TestWriteAscii(t *testing.T) {
+	var in, out bytes.Buffer
+	protocol := makeTelnetProtocol(&in, &out)
+	expected := []byte("hello")
+	n, err := protocol.Write(expected)
+	if err != nil { t.Fatalf("Error Writing: %q", err) }
+	if n != len(expected) {
+		t.Fatalf("Expected to write %d but wrote %d", len(expected), n)
+	}
+	assertEqual(t, out.Bytes(), expected)
+}
+
+func TestWriteIAC(t *testing.T) {
+	var in, out bytes.Buffer
+	protocol := makeTelnetProtocol(&in, &out)
+	n, err := protocol.Write([]byte{'h', InterpretAsCommand, 'i'})
+	if err != nil { t.Fatalf("Error Writing: %q", err) }
+	if n != 3 { t.Fatalf("Expected to write 3 but wrote %d", n) }
+	expected := []byte{'h', InterpretAsCommand, InterpretAsCommand, 'i'}
+	assertEqual(t, out.Bytes(), expected)
+}
