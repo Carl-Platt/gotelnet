@@ -72,3 +72,24 @@ func TestNaiveOptionNegotiation(t *testing.T) {
 	testOption(t, Will, Dont, "Will")
 	testOption(t, Wont, Dont, "Wont")
 }
+
+type Error string
+func (e Error) Error() string { return string(e) }
+
+type boomReader int
+func (r boomReader) Read(b []byte) (n int, err error) {
+	for i := 0; i < int(r); i++ {
+		b[i] = 'A' + byte(i)
+	}
+	return int(r), Error("boom")
+}
+
+func TestErrorReading(t *testing.T) {
+	var out bytes.Buffer
+	protocol := makeTelnetProtocol(boomReader(2), &out)
+	buf := make([]byte, 16)
+	n, err := protocol.Read(buf);
+	if err == nil { t.Fatalf("expected error") }
+	if err.Error() != "boom" { t.Fatalf("expected \"boom\", got %q", err) }
+	assertEqual(t, buf[:n], []byte("AB"))
+}
