@@ -23,3 +23,7 @@ func Dial(addr string) (conn Conn, err error) {
 func (c client) Read(b []byte) (int, error) {
 	return c.p.Read(b)
 }
+
+func (c client) Write(b []byte) (int, error) {
+	return c.p.Write(b)
+}
